@@ -7,9 +7,14 @@ import device_generation.basic as basic
 import gdspy
 import device_generation.glovar as glovar
 import time
+import subprocess
+import os
+import json
 
 class Placer(object):
-    def __init__(self, magicalDB, cktIdx, dirname, gridStep, halfMetWid):
+    def __init__(self, magicalDB, cktIdx, dirname, gridStep, halfMetWid,no,obj_param):
+        self.no = no
+        self.obj_param = obj_param
         self.mDB = magicalDB
         self.dDB = magicalDB.designDB.db
         self.tDB = magicalDB.techDB
@@ -30,6 +35,7 @@ class Placer(object):
     def placeParams(self):
         self.deviceProximityTypes = [magicalFlow.ImplTypePCELL_Nch, magicalFlow.ImplTypePCELL_Pch]
     def run(self):
+        print("bitch I will run")
         self.useIoPin = True
         self.usePowerStripe = True
         self.isTopLevel = False
@@ -41,7 +47,9 @@ class Placer(object):
         self.dumpInput()
         self.placer.numThreads(1) #FIXME
         start = time.time()
-        self.symAxis = self.placer.solve(self.gridStep)
+        print("obj_param",self.obj_param)
+        self.symAxis = self.placer.solve(self.gridStep,self.obj_param)
+        print("symAxis ",self.symAxis)
         end = time.time()
         self.runtime = end-start
         print("placement finished: ", self.ckt.name, "runtime", end-start)
@@ -128,6 +136,7 @@ class Placer(object):
         self.symAxis = int(self.symAxis - self.origin[0])
         self.readoutIoPins()
         self.writeoutPlacementResult()
+        self.extract_features()
     def readoutIoPins(self):
         self.iopinOffsetx =[]
         self.iopinOffsety = []
@@ -205,6 +214,7 @@ class Placer(object):
     def writeoutPlacementResult(self):
         # Write results to flow
         self.initPowerPins()
+        print("origin again  ",self.origin)
         for nodeIdx in range(self.numCktNodes):
             cktNode = self.ckt.node(nodeIdx)
             subCkt = self.dDB.subCkt(cktNode.graphIdx)
@@ -253,7 +263,11 @@ class Placer(object):
                 cktNode.setOffset(0, 0)
                 self.ckt.layout().insertLayout(subCkt.layout(), 0, 0, cktNode.flipVertFlag)
         # Output placement result
+        dataset_gds_dir = self.dirname + "dataset/rundir_"+str(self.no)+"/"
+        if not os.path.exists(dataset_gds_dir):
+            subprocess.call("mkdir {}".format(dataset_gds_dir),shell=True)
         magicalFlow.writeGdsLayout(self.cktIdx, self.dirname + self.ckt.name + '.place.gds', self.dDB, self.tDB)
+        magicalFlow.writeGdsLayout(self.cktIdx, dataset_gds_dir + self.ckt.name + '_' + str(self.no)+'.place.gds', self.dDB, self.tDB)
         self.origin = [0,0]
         if self.debug:
             gdspy.write_gds(self.dirname+self.ckt.name+'.floorplan.gds', [self.tempCell], unit=1.0e-9, precision=1.0e-9)
@@ -550,7 +564,23 @@ class Placer(object):
                 self.origin[0] = self.placer.xCellLoc(nodeIdx)
             if self.origin[1] > self.placer.yCellLoc(nodeIdx):
                 self.origin[1] = self.placer.yCellLoc(nodeIdx)
+
+        # pinidxidx = net.pinIdx(pinIdx)
+        #         pin = self.ckt.pin(pinidxidx)
+        #         nodeIdx = pin.nodeIdx
+        # for netIdx in range(self.ckt.numNets()):
+        #         net = self.ckt.net(netIdx)
+        #         print("net name ",net.name)
+        #         for pinIndex in range(net.numPins()):
+        #             pinidxidx = net.pinIdx(pinIndex)
+        #             pin = self.ckt.pin(pinidxidx)
+        #             nodeIdx = pin.nodeIdx
+        #             print("node name ",self.ckt.node(nodeIdx).name)
+                # for node in net.vNodes:
+                #     print("node name: ", node.name)
+
         if self.useIoPin:
+            print("use io pin or not?")
             for netIdx in range(self.ckt.numNets()):
                 net = self.ckt.net(netIdx)
                 if (net.isIo() and (not net.isPower())):
@@ -626,3 +656,72 @@ class Placer(object):
             self.isSmallModule = True
         else:
             self.isSmallModule = False
+    
+    def extract_features(self):
+        dataset_dir = self.dirname+"dataset/"
+        rundir = "{}rundir_{}/".format(dataset_dir,self.no)
+        net_file = rundir + "data_net.json"
+        layout_file = rundir + "data_layout.json"
+        nets_feature_map = {}
+        layout_feature_map = {}
+        if os.path.exists(net_file) and os.path.exists(layout_file):
+            return
+        if not os.path.exists(dataset_dir):
+            subprocess.call("mkdir {}".format(dataset_dir), shell=True)
+        if not os.path.exists(rundir):
+            subprocess.call("mkdir {}".format(rundir), shell=True)
+        
+        for netIdx in range(self.ckt.numNets()):
+            net = self.ckt.net(netIdx)
+            net_feature = {
+                "degree":net.numPins(),
+                "name":net.name,
+                "pins": [],
+                "parasitic_cap": -1
+            }
+            
+            for pinIndex in range(net.numPins()):
+                pinidxidx = net.pinIdx(pinIndex)
+                pin = self.ckt.pin(pinidxidx)
+                nodeIdx = pin.nodeIdx
+                net_feature["pins"].append(self.ckt.node(nodeIdx).name)
+            nets_feature_map[net.name] = net_feature
+        json_net_obj = json.dumps(nets_feature_map)
+        with open(net_file, "w") as f:
+            f.write(json_net_obj)
+        
+        # with open(self.dirname + self.ckt.name +".net_feature","w") as f:
+        #     for netIdx in range(self.ckt.numNets()):
+        #         net = self.ckt.net(netIdx)
+        #         f.write("{} {}\n".format(net.name,net.numPins()))
+        #         for pinIndex in range(net.numPins()):
+        #             pinidxidx = net.pinIdx(pinIndex)
+        #             pin = self.ckt.pin(pinidxidx)
+        #             nodeIdx = pin.nodeIdx
+        #             x_offset = self.placer.xCellLoc(nodeIdx) - self.origin[0]
+        #             y_offset = self.placer.yCellLoc(nodeIdx) - self.origin[1]
+        #             print("node name ",self.ckt.node(nodeIdx).name)
+        #             f.write("{} {} {}\n".format(self.ckt.node(nodeIdx).name,x_offset,y_offset))
+
+        for nodeIdx in range(self.numCktNodes):
+   
+            cktNode = self.ckt.node(nodeIdx)
+            subCkt = self.dDB.subCkt(cktNode.graphIdx)
+            boundary = subCkt.layout().boundary()
+            x_offset = self.placer.xCellLoc(nodeIdx) - self.origin[0]
+            y_offset = self.placer.yCellLoc(nodeIdx) - self.origin[1]
+            node_feature = {
+                "x_offset":x_offset,
+                "y_offset":y_offset,
+                "name":cktNode.name,
+                "xLo":boundary.xLo,
+                "yLo":boundary.yLo,
+                "xHi":boundary.xHi,
+                "yHi":boundary.yHi,
+                "refName":cktNode.refName
+
+            }
+            layout_feature_map[cktNode.name] = node_feature
+        json_layout_obj = json.dumps(layout_feature_map)
+        with open(layout_file, "w") as f:
+            f.write(json_layout_obj)

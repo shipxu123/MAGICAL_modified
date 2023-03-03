@@ -44,7 +44,7 @@ class PnR(object):
         self.dDB.subCkt(cktIdx).isImpl = True
         print("PnR: finished ", self.dDB.subCkt(cktIdx).name)
 
-    def placeOnly(self, cktIdx, dirname):
+    def placeOnly(self, cktIdx, dirname, no, obj_param):
         """
         @brief PnR a circuit in the designDB
         @param the index of subckt
@@ -53,38 +53,42 @@ class PnR(object):
             self.isTopLevel = True
         else:
             self.isTopLevel = False
-        print("PnR: working on ", self.dDB.subCkt(cktIdx).name)
+        print("PnR: anotated working on ", self.dDB.subCkt(cktIdx).name)
         self.cktIdx = cktIdx
         self.dirname = dirname
-        self.runPlace(cktIdx, dirname)
+        self.runPlace(cktIdx, dirname, no, obj_param)
         self.checkSmallModule(cktIdx)
         self.dDB.subCkt(cktIdx).isImpl = True
         print("PnR: placement finished ", self.dDB.subCkt(cktIdx).name)
 
-    def routeOnly(self):
+    def routeOnly(self, no):
         """
         @brief PnR a circuit in the designDB
         @param the index of subckt
         """
 
         self.p.updatePlacementResult()
-        self.runRoute(self.cktIdx, self.dirname)
+        self.runRoute(self.cktIdx, self.dirname, no)
         print("PnR: routing finished ", self.dDB.subCkt(self.cktIdx).name)
             
-    def runPlace(self, cktIdx, dirname):
-        self.p = Placer.Placer(self.mDB, cktIdx, dirname,self.gridStep, self.halfMetWid)
+    def runPlace(self, cktIdx, dirname, no, obj_param):
+        self.p = Placer.Placer(self.mDB, cktIdx, dirname,self.gridStep, self.halfMetWid, no, obj_param)
         #self.p.implRealLayout = False
         #self.p.run()
         #self.p.resetPlacer()
         self.p.implRealLayout = True
+        print("before run")
         self.p.run()
+        print("after run")
         self.runtime += self.p.runtime
         self.symAxis = self.p.symAxis
         self.origin = self.p.origin
+        # print("after placement, origin",self.origin)
         self.subShapeList = self.p.subShapeList
         self.upscaleBBox(self.gridStep, self.dDB.subCkt(cktIdx), self.origin)
+        # print("after placement, origin",self.origin)
 
-    def runRoute(self, cktIdx, dirname):
+    def runRoute(self, cktIdx, dirname,no):
         print("runtime, ", self.runtime)
         ckt = self.dDB.subCkt(cktIdx)
         self.routerNets = []
@@ -120,6 +124,8 @@ class PnR(object):
         if not routerPass:
             print("Routing failed! ckt ", ckt.name)
             assert(routerPass)
+        dataset_gds_dir = dirname + "dataset/rundir_"+str(no)+"/"
+        router.writeLayoutGds(placeFile, dataset_gds_dir+ckt.name+'_'+str(no)+'.route.gds', True)
         router.writeLayoutGds(placeFile, dirname+ckt.name+'.route.gds', True)
         router.writeDumb(placeFile, dirname+ckt.name+'.ioPin') 
         # Read results to flow

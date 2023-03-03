@@ -18,7 +18,7 @@
 //                   VDD	= VDD
 //                   VREF	= VREF
 //                   VSS	= VSS
-topckt Core_test_flow INM INP OUTM OUTP VBIAS_P VDD VREF VSS
+topckt Core_top_flat INM INP OUTM OUTP VBIAS_P VDD VREF VSS
 // pch Instance MP1c = spectre device MP1c
 MP1c (net020 VBIAS_P VDD VDD) pch l=120.0n w=16.0u m=1 nf=8 
 

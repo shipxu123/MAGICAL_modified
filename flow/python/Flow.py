@@ -22,6 +22,8 @@ class Flow(object):
         self.params = self.mDB.params
         self.pnrs = []
         self.runtime = 0
+        self.no = -1
+        self.obj_param = []
 
     def run(self):
         """
@@ -29,13 +31,15 @@ class Flow(object):
         @return if successful
         """
         self.resultName = self.mDB.params.resultDir
+        self.no = self.mDB.params.no
+        self.obj_param = [self.mDB.params.param_0,self.mDB.params.param_1,self.mDB.params.param_2]
         topCktIdx = self.mDB.topCktIdx() # The index of the topckt
         start = time.time()
         self.implCktLayout(topCktIdx)
         end = time.time()
         print("runtime ", end - start)
         for pnr in self.pnrs:
-            pnr.routeOnly()
+            pnr.routeOnly(self.no)
         return True
 
     def generateConstraints(self):
@@ -57,9 +61,11 @@ class Flow(object):
 
     def setup(self, cktIdx):
         ckt = self.dDB.subCkt(cktIdx) 
+        print("circuit name ",ckt.name)
         for nodeIdx in range(ckt.numNodes()):
             flipCell = False
             cktNode = ckt.node(nodeIdx)
+            # print("cktNOde ",cktNode)
             # Flip cell if is in the "right" half device of symmetry
             if cktNode.name in self.symDict.values():
                 flipCell = True
@@ -85,18 +91,23 @@ class Flow(object):
         ckt = dDB.subCkt(cktIdx) #magicalFlow.CktGraph
         # If the ckt is a device, generation will be added in setup()
         if magicalFlow.isImplTypeDevice(ckt.implType):
+            print("generation of device", ckt.implType,ckt.name)
             Device_generator.Device_generator(self.mDB).generateDevice(cktIdx, self.resultName+'/gds/') #FIXME: directly add to the database
             return
         # If the ckt is a standard cell
         # This version only support DFCNQD2BWP and NR2D8BWP, hard-encoded
         # TODO: This should be parsed from the json file
         if self.isCktStdCells(cktIdx):
+            print("standard cell ",ckt.name)
             StdCell.StdCell(self.mDB).setup(cktIdx, self.resultName)
             return
         # If the ckt is actually a circuit instead of a device
+        print("subcuirt ",ckt.name, "num of nodes",ckt.numNodes())
         for nodeIdx in range(ckt.numNodes()):
             cktNode = ckt.node(nodeIdx) # magicalFlow.CktNode
+            # print("node name",cktNode.name)
             if cktNode.isLeaf(): # Do not go deeper for leaf node
+                print("leaf ",cktNode.name)
                 continue
             subCkt = dDB.subCkt(cktNode.graphIdx)
             if (subCkt.isImpl): # Do not duplicately implement the layout
@@ -108,7 +119,7 @@ class Flow(object):
         self.symDict = self.constraint.genConstraint(cktIdx, self.resultName)
         self.setup(cktIdx)
         pnr = PnR.PnR(self.mDB)
-        pnr.placeOnly(cktIdx, self.resultName)
+        pnr.placeOnly(cktIdx, self.resultName, self.no, self.obj_param)
         self.runtime += pnr.runtime
         self.pnrs.append(pnr)
         #PnR.PnR(self.mDB).implLayout(cktIdx, self.resultName)

@@ -16,6 +16,10 @@ class Params:
         """
         @brief initialization
         """
+        self.no = -1 # configuration number
+        self.param_0 = 1
+        self.param_1 = 1
+        self.param_2 = 1
         self.spectre_netlist = None # Input spectre netlist file
         self.hspice_netlist = None # Input hspice netlist file
         self.simple_tech_file = "" # Input simple tech file
@@ -103,6 +107,10 @@ simple_tech_file [required]    | input simple techfile
         if 'techfile' in data : self.techfile = data['techfile']
         if 'vddNetNames' in data : self.vddNetNames = data['vddNetNames']
         if 'vssNetNames' in data : self.vssNetNames = data['vssNetNames']
+        if 'no' in data: self.no = data["no"]
+        if 'param_0' in data: self.param_0 = data["param_0"]
+        if 'param_1' in data: self.param_1 = data["param_1"]
+        if 'param_2' in data: self.param_2 = data["param_2"]
 
     def dump(self, filename):
         """
