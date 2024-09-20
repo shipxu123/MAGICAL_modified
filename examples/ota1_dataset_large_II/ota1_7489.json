@@ -1,0 +1,1 @@
+{"spectre_netlist": "ota1.sp", "resultDir": "./", "techfile": "../mockPDK/mock.techfile", "simple_tech_file": "../mockPDK/techfile.simple", "lef": "../mockPDK/mock.lef", "no": 7489, "param_0": 0.5125, "param_1": 1.0, "param_2": 0.625}

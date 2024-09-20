@@ -1,0 +1,60 @@
+subckt opa_gbn AVDD AVSS VBN1 VBN2 VBP1 VBP2 VIN VIP VON VOP VREF VSUB
+
+    PM13 (net106 VBP1 AVDD AVDD) pch_lvt w=20u l=200n nf=4 as=2e-12 \
+        ad=1.6e-12 ps=30.8u pd=20.64u nrd=0.004 nrs=0.004 sa=120.0n \
+        sb=120.0n sd=160.0n sca=0.557654 scb=8.18643e-09 scc=6.74522e-17 \
+        DCN=36 DPS=140.00n DPCS=50n DSTS=1u mr=6 mismod=1 \
+        globalmod=1 prelayout=1 LPEMOD=1
+    PM12 (VOP VBP1 AVDD AVDD) pch_lvt w=20u l=200n nf=4 as=2e-12 \
+        ad=1.6e-12 ps=30.8u pd=20.64u nrd=0.004 nrs=0.004 sa=120.0n \
+        sb=120.0n sd=160.0n sca=0.557654 scb=8.18643e-09 scc=6.74522e-17 \
+        DCN=36 DPS=140.00n DPCS=50n DSTS=1u mr=2 mismod=1 \
+        globalmod=1 prelayout=1 LPEMOD=1
+    PM11 (VON VBP1 AVDD AVDD) p11ll_ckt w=20u l=200n nf=4 as=2e-12 \
+        ad=1.6e-12 ps=30.8u pd=20.64u nrd=0.004 nrs=0.004 sa=120.0n \
+        sb=120.0n sd=160.0n sca=0.557654 scb=8.18643e-09 scc=6.74522e-17 \
+        DCN=36 DPS=140.00n DPCS=50n DSTS=1u mr=2 mismod=1 \
+        globalmod=1 prelayout=1 LPEMOD=1
+    PM17 (net109 VIN net106 net106) p11ll_ckt w=20u l=200n nf=4 as=2e-12 \
+        ad=1.6e-12 ps=30.8u pd=20.64u nrd=0.004 nrs=0.004 sa=120.0n \
+        sb=120.0n sd=160.0n sca=0.557654 scb=8.18643e-09 scc=6.74522e-17 \
+        DCN=36 DPS=140.00n DPCS=50n DSTS=1u mr=6 mismod=1 \
+        globalmod=1 prelayout=1 LPEMOD=1
+    PM16 (net117 VIP net106 net106) p11ll_ckt w=(20u) l=200n nf=4 as=2e-12 \
+        ad=1.6e-12 ps=30.8u pd=20.64u nrd=0.004 nrs=0.004 sa=120.0n \
+        sb=120.0n sd=160.0n sca=0.557654 scb=8.18643e-09 scc=6.74522e-17 \
+        DCN=(36) DPS=140.00n DPCS=(50n) DSTS=1u mr=(6) mismod=1 \
+        globalmod=1 prelayout=1 LPEMOD=1
+    PM15 (AVSS VREF net106 net106) p11ll_ckt w=(20u) l=200n nf=4 as=2e-12 \
+        ad=1.6e-12 ps=30.8u pd=20.64u nrd=0.004 nrs=0.004 sa=120.0n \
+        sb=120.0n sd=160.0n sca=0.557654 scb=8.18643e-09 scc=6.74522e-17 \
+        DCN=(36) DPS=140.00n DPCS=(50n) DSTS=1u mr=(6) mismod=1 \
+        globalmod=1 prelayout=1 LPEMOD=1
+    NM18 (net109 VBN1 AVSS VSUB) n11ll_ckt w=(10u) l=200n nf=2 as=1.2e-12 \
+        ad=8e-13 ps=20.48u pd=10.32u nrd=0.008 nrs=0.008 sa=120.0n \
+        sb=120.0n sd=160.0n sca=0.661295 scb=1.50584e-08 scc=1.25368e-16 \
+        DCN=(36) DPS=140.00n DPCS=(50n) DSTS=1u mr=(4) mismod=1 \
+        globalmod=1 prelayout=1 LPEMOD=1
+    NM13 (VON VBN2 net117 VSUB) n11ll_ckt w=(10u) l=100n nf=2 as=1.2e-12 \
+        ad=8e-13 ps=20.48u pd=10.32u nrd=0.008 nrs=0.008 sa=120.0n \
+        sb=120.0n sd=160.0n sca=0.701781 scb=2.17516e-08 scc=2.0867e-16 \
+        DCN=(36) DPS=140.00n DPCS=(50n) DSTS=1u mr=(2) mismod=1 \
+        globalmod=1 prelayout=1 LPEMOD=1
+    NM16 (VOP VBN2 net109 VSUB) n11ll_ckt w=(10u) l=100n nf=2 as=1.2e-12 \
+        ad=8e-13 ps=20.48u pd=10.32u nrd=0.008 nrs=0.008 sa=120.0n \
+        sb=120.0n sd=160.0n sca=0.701781 scb=2.17516e-08 scc=2.0867e-16 \
+        DCN=(36) DPS=140.00n DPCS=(50n) DSTS=1u mr=(2) mismod=1 \
+        globalmod=1 prelayout=1 LPEMOD=1
+    NM17 (net117 VBN1 AVSS VSUB) n11ll_ckt w=(10u) l=200n nf=2 as=1.2e-12 \
+        ad=8e-13 ps=20.48u pd=10.32u nrd=0.008 nrs=0.008 sa=120.0n \
+        sb=120.0n sd=160.0n sca=0.661295 scb=1.50584e-08 scc=1.25368e-16 \
+        DCN=(36) DPS=140.00n DPCS=(50n) DSTS=1u mr=(4) mismod=1 \
+        globalmod=1 prelayout=1 LPEMOD=1
+    NM9 (AVSS AVDD AVSS VSUB) n11ll_ckt w=(10u) l=2u nf=2 as=1.2e-12 \
+        ad=8e-13 ps=20.48u pd=10.32u nrd=0.008 nrs=0.008 sa=120.0n \
+        sb=120.0n sd=160.0n sca=0.378865 scb=2.8937e-09 scc=2.14556e-17 \
+        DCN=(36) DPS=140.00n DPCS=(50n) DSTS=1u mr=(1) mismod=1 \
+        globalmod=1 prelayout=1 LPEMOD=1
+ends OPA_GBN
+
+

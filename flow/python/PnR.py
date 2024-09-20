@@ -112,6 +112,9 @@ class PnR(object):
         router.setSymAxisX(2*self.symAxis)
         router.setGridOffsetX(2*(self.origin[0] - self.gridStep * 10))
         router.setGridOffsetY(2*(self.origin[1] - self.gridStep * 10))
+        print("GridStep ", 2*self.gridStep)
+        print("SymAxisX ", 2*self.symAxis)
+        
         print("routing grid off set", 2*(self.origin[0]), 2*(self.origin[1]))
         #router.parseSymNet(dirname+ckt.name+'.symnet')
         if self.isTopLevel:
@@ -196,6 +199,7 @@ class PnR(object):
                 assert self.subShapeList[i][0] <= self.subShapeList[i][2]
                 assert self.subShapeList[i][1] <= self.subShapeList[i][3]
                 callback(self.subShapeList[0], True)
+
     def findOrigin(self, cktIdx):
         def updateCallback(shape, isGuardRing):
             if isGuardRing:

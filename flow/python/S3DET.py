@@ -64,14 +64,28 @@ class S3DET(object):
                 print nodeA.name, nodeB.name, symVal[nodeIdxA][nodeIdxB]
                 """
         symValKeys = list(symVal.keys())
+        # Fixed Bug by Peng XU
+        deletedModules = {}
+
         for idxA in symValKeys:
             if idxA not in symVal:
                 continue
+            print(f'idxA = {idxA}' )
             tempDict = symVal[idxA]
+
+            # Fixed Bug by Peng XU
+            tempIdxes = list(tempDict.keys())
+            for tempIdx in tempIdxes:
+                if tempIdx in deletedModules:
+                    tempDict.pop(tempIdx, None)
+
+            if not tempDict:
+                continue
+
             tempList = list(tempDict.values())
             idxB = list(tempDict.keys())[tempList.index(max(tempList))]
-            #symPair[idxA] = idxB
-            #symVal.pop(idxB, None)
+            # symPair[idxA] = idxB
+            # symVal.pop(idxB, None)
             # Adding fix, need to recursively remove. Dirty fix for now.
             tempDict_p = symVal[idxB]
             tempList_p = list(tempDict_p.values())
@@ -79,14 +93,19 @@ class S3DET(object):
             if idxA == idxA_p:
                 symPair[idxA] = idxB
                 symVal.pop(idxB, None)
+                # Fixed Bug by Peng XU
+                deletedModules[idxB] = tempDict_p
             else:
                 val1 = tempDict[idxB]
                 val2 = tempDict_p[idxA_p]
                 if val1 > val2:
                     symPair[idxA] = idxB
                     symVal.pop(idxB, None)
+                    # Fixed Bug by Peng XU
+                    deletedModules[idxB] = tempDict_p
                 else:
                     continue
+
         filename = dirName + ckt.name + ".sym"
         symFile = open(filename, "w")
         for idxA in symPair:

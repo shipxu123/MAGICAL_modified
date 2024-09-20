@@ -37,9 +37,12 @@ class Flow(object):
         start = time.time()
         self.implCktLayout(topCktIdx)
         end = time.time()
-        print("runtime ", end - start)
+        print("Placement Runtime ", end - start)
+        start = time.time()
         for pnr in self.pnrs:
             pnr.routeOnly(self.no)
+        end = time.time()
+        print("Routing Runtime ", end - start)
         return True
 
     def generateConstraints(self):

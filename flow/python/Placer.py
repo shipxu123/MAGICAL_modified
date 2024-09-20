@@ -10,9 +10,12 @@ import time
 import subprocess
 import os
 import json
+import copy
+
+import pdb
 
 class Placer(object):
-    def __init__(self, magicalDB, cktIdx, dirname, gridStep, halfMetWid,no,obj_param):
+    def __init__(self, magicalDB, cktIdx, dirname, gridStep, halfMetWid, no, obj_param):
         self.no = no
         self.obj_param = obj_param
         self.mDB = magicalDB
@@ -22,9 +25,15 @@ class Placer(object):
         self.cktIdx = cktIdx
         self.ckt = self.dDB.subCkt(cktIdx)
         self.placer = IdeaPlaceExPy.IdeaPlaceEx()
+
+        # initilize performace guiding placer
+        self.paplacer = IdeaPlaceExPy.PAPlace()
+        self.paplacer.setIdeaPlaceEX(self.placer)
+
+        # self.guide = IdeaPlaceExPy、conste
         self.dirname = dirname
         self.numCktNodes = self.ckt.numNodes() # without io pins
-        self.gridStep = gridStep 
+        self.gridStep = gridStep
         self.halfMetWid = halfMetWid
         self.subShapeList = list()
         self.params = magicalDB.params
@@ -32,10 +41,11 @@ class Placer(object):
         self.placeParams()
         self.guardRingGrCells = []
         self.implRealLayout = True # if we want to implement new layout 
+
     def placeParams(self):
         self.deviceProximityTypes = [magicalFlow.ImplTypePCELL_Nch, magicalFlow.ImplTypePCELL_Pch]
+
     def run(self):
-        print("bitch I will run")
         self.useIoPin = True
         self.usePowerStripe = True
         self.isTopLevel = False
@@ -47,13 +57,20 @@ class Placer(object):
         self.dumpInput()
         self.placer.numThreads(1) #FIXME
         start = time.time()
-        print("obj_param",self.obj_param)
-        self.symAxis = self.placer.solve(self.gridStep,self.obj_param)
+
+        for i in range(100):
+            print("obj_param",self.obj_param)
+
+        # initilize here
+        # pdb.set_trace()
+        self.symAxis = self.placer.solveWithParams(self.gridStep, self.obj_param, self.paplacer)
+
         print("symAxis ",self.symAxis)
         end = time.time()
         self.runtime = end-start
         print("placement finished: ", self.ckt.name, "runtime", end-start)
         self.processPlacementOutput()
+
     def dumpInput(self):
         self.placer.readTechSimpleFile(self.params.simple_tech_file)
         self.placeParsePin()
@@ -81,8 +98,8 @@ class Placer(object):
         ckt = self.ckt
         if ckt.implType == magicalFlow.ImplTypeUNSET:
             csflow.computeCurrentFlow(ckt)
-            pinNamePaths = csflow.currentPinPaths();
-            cellNamePaths = csflow.currentCellPaths();
+            pinNamePaths = csflow.currentPinPaths()
+            cellNamePaths = csflow.currentCellPaths()
             csflow.computeCurrentFlow(ckt)
             for i in range(len(pinNamePaths)):
                 pathIdx = self.placer.allocateSignalPath()
@@ -110,8 +127,6 @@ class Placer(object):
                 for placerCellIdx in cells:
                     self.placer.addCellToProximityGroup(placerCellIdx, proxGrpIdx)
 
-
-
     def configureIoPinParameters(self):
         #if self.useIoPin == False:
         #    self.placer.closeVirtualPinAssignment()
@@ -129,6 +144,7 @@ class Placer(object):
             if net.isVss():
             #if net.isVss() and not self.isTopLevel:
                 self.placer.markAsVssNet(netIdx)
+
     def processPlacementOutput(self):
         #  Set Placement origin
         self.setPlaceOrigin()
@@ -136,7 +152,10 @@ class Placer(object):
         self.symAxis = int(self.symAxis - self.origin[0])
         self.readoutIoPins()
         self.writeoutPlacementResult()
+
+        # For generating dataset
         self.extract_features()
+
     def readoutIoPins(self):
         self.iopinOffsetx =[]
         self.iopinOffsety = []
@@ -150,7 +169,7 @@ class Placer(object):
                 self.iopinOffsetx.append(ioPinX)
                 self.iopinOffsety.append(ioPinY)
                 #FIXME
-                size_scale = 1;
+                size_scale = 1
                 if (self.placer.isIoPinVertical(netIdx)):
                     metals = [
                             [- 65, -self.gridStep * (1 + size_scale)  - 70 - 30, 65, self.gridStep * (1+size_scale)  + 70 + 30]
@@ -168,6 +187,7 @@ class Placer(object):
                 # add a new pin to the net
                 self.addIoPinToNet(netIdx, ioPinX, ioPinY, metals, metalPkdLayers, cuts, cutsPdkLayers)
         self.ckt = self.dDB.subCkt(self.cktIdx)
+
     def upscaleBBox(self, gridStep, ckt, origin):
         """
         @brief for legalize the boundary box after the routing. The routing wire might change the boundary of placement, so that the bounding box need to be adjust to multiple of grid step
@@ -262,10 +282,12 @@ class Placer(object):
                 subCkt = self.dDB.subCkt(cktNode.graphIdx)
                 cktNode.setOffset(0, 0)
                 self.ckt.layout().insertLayout(subCkt.layout(), 0, 0, cktNode.flipVertFlag)
+
         # Output placement result
-        dataset_gds_dir = self.dirname + "dataset/rundir_"+str(self.no)+"/"
+        dataset_gds_dir = self.dirname + "dataset/rundir_" + str(self.no) + "/"
         if not os.path.exists(dataset_gds_dir):
             subprocess.call("mkdir {}".format(dataset_gds_dir),shell=True)
+
         magicalFlow.writeGdsLayout(self.cktIdx, self.dirname + self.ckt.name + '.place.gds', self.dDB, self.tDB)
         magicalFlow.writeGdsLayout(self.cktIdx, dataset_gds_dir + self.ckt.name + '_' + str(self.no)+'.place.gds', self.dDB, self.tDB)
         self.origin = [0,0]
@@ -355,7 +377,6 @@ class Placer(object):
                     otherPdkLayers.append(layer[0])
                     otherDataType.append(datatype)
         self.addIoPinToNet(netIdx, offsetX, offsetY, routableShapes, routablePdkLayers, otherShapes, otherPdkLayers, addtocurrentlayout=False, isPowerStripe=isPowerStripe, useDatatype=True, routableDatatype=routableDatatype, otherDataType=otherDataType)
-
 
     def addIoPinToNet(self, netIdx, offsetX, offsetY, routableShapes, routablePdkLayers, otherShapes, otherPdkLayers, addtocurrentlayout=False,
             isPowerStripe=False, useDatatype=False, routableDatatype=[], otherDataType=[]):
@@ -470,7 +491,6 @@ class Placer(object):
                 print("\n\n\n\n add vss ")
                 self.addPycellIoPinToNet(netIdx, 0, 0, vssStripe, isPowerStripe=True)
 
-
     def placeConnection(self):
         """
         @brief add pin connection info to placer
@@ -565,20 +585,6 @@ class Placer(object):
             if self.origin[1] > self.placer.yCellLoc(nodeIdx):
                 self.origin[1] = self.placer.yCellLoc(nodeIdx)
 
-        # pinidxidx = net.pinIdx(pinIdx)
-        #         pin = self.ckt.pin(pinidxidx)
-        #         nodeIdx = pin.nodeIdx
-        # for netIdx in range(self.ckt.numNets()):
-        #         net = self.ckt.net(netIdx)
-        #         print("net name ",net.name)
-        #         for pinIndex in range(net.numPins()):
-        #             pinidxidx = net.pinIdx(pinIndex)
-        #             pin = self.ckt.pin(pinidxidx)
-        #             nodeIdx = pin.nodeIdx
-        #             print("node name ",self.ckt.node(nodeIdx).name)
-                # for node in net.vNodes:
-                #     print("node name: ", node.name)
-
         if self.useIoPin:
             print("use io pin or not?")
             for netIdx in range(self.ckt.numNets()):
@@ -658,14 +664,16 @@ class Placer(object):
             self.isSmallModule = False
     
     def extract_features(self):
-        dataset_dir = self.dirname+"dataset/"
-        rundir = "{}rundir_{}/".format(dataset_dir,self.no)
+        dataset_dir = self.dirname + "dataset/"
+        rundir = "{}rundir_{}/".format(dataset_dir, self.no)
+
         net_file = rundir + "data_net.json"
         layout_file = rundir + "data_layout.json"
         nets_feature_map = {}
         layout_feature_map = {}
         if os.path.exists(net_file) and os.path.exists(layout_file):
             return
+
         if not os.path.exists(dataset_dir):
             subprocess.call("mkdir {}".format(dataset_dir), shell=True)
         if not os.path.exists(rundir):
@@ -679,7 +687,7 @@ class Placer(object):
                 "pins": [],
                 "parasitic_cap": -1
             }
-            
+
             for pinIndex in range(net.numPins()):
                 pinidxidx = net.pinIdx(pinIndex)
                 pin = self.ckt.pin(pinidxidx)
@@ -689,22 +697,8 @@ class Placer(object):
         json_net_obj = json.dumps(nets_feature_map)
         with open(net_file, "w") as f:
             f.write(json_net_obj)
-        
-        # with open(self.dirname + self.ckt.name +".net_feature","w") as f:
-        #     for netIdx in range(self.ckt.numNets()):
-        #         net = self.ckt.net(netIdx)
-        #         f.write("{} {}\n".format(net.name,net.numPins()))
-        #         for pinIndex in range(net.numPins()):
-        #             pinidxidx = net.pinIdx(pinIndex)
-        #             pin = self.ckt.pin(pinidxidx)
-        #             nodeIdx = pin.nodeIdx
-        #             x_offset = self.placer.xCellLoc(nodeIdx) - self.origin[0]
-        #             y_offset = self.placer.yCellLoc(nodeIdx) - self.origin[1]
-        #             print("node name ",self.ckt.node(nodeIdx).name)
-        #             f.write("{} {} {}\n".format(self.ckt.node(nodeIdx).name,x_offset,y_offset))
 
         for nodeIdx in range(self.numCktNodes):
-   
             cktNode = self.ckt.node(nodeIdx)
             subCkt = self.dDB.subCkt(cktNode.graphIdx)
             boundary = subCkt.layout().boundary()
@@ -719,9 +713,102 @@ class Placer(object):
                 "xHi":boundary.xHi,
                 "yHi":boundary.yHi,
                 "refName":cktNode.refName
-
             }
             layout_feature_map[cktNode.name] = node_feature
         json_layout_obj = json.dumps(layout_feature_map)
         with open(layout_file, "w") as f:
             f.write(json_layout_obj)
+
+        place_pin_file = rundir + "place.pin"
+        self.writePlacePinFile(place_pin_file)
+
+        place_result_file = rundir + "place.result"
+        self.writePlaceResultFile(place_result_file)
+
+        place_connection_file = rundir + "place.connection"
+        self.writePlaceConnectionFile(place_connection_file)
+
+    def writePlacePinFile(self, fileName):
+        pin_type_codes_pn = ['D', 'G', 'S', 'B']
+        pin_type_codes_rm = ['PLUS', 'MINUS', 'B']
+
+        with open(fileName, 'w') as fn:
+            for nodeIdx in range(self.numCktNodes):
+                node = self.ckt.node(nodeIdx)
+                cellName = node.name
+                fn.write("%s\n" % (cellName.split("_")[-1]))
+                subCkt = self.dDB.subCkt(node.graphIdx)
+                boundary = subCkt.layout().boundary()
+
+                for pinInNodeIdx in range(node.numPins()):
+                    pin = self.ckt.pin(node.pinIdx(pinInNodeIdx))
+                    internalNetIdx = pin.intNetIdx
+                    subnet = subCkt.net(internalNetIdx)
+                    shape = subnet.ioShape()
+                    layer = subnet.ioLayer
+
+                    if node.numPins()  == 4:
+                        pin_type_code = pin_type_codes_pn[pinInNodeIdx]
+                    elif node.numPins() == 3:
+                        pin_type_code = pin_type_codes_rm[pinInNodeIdx]
+                    elif node.numPins() == 2:
+                        pin_type_code = pin_type_codes_rm[pinInNodeIdx]
+                    else:
+                        print(cellName)
+                        raise NotImplementedError("Not support tpye of pins.")
+
+                    # jump over pin with bulk type to avoid handle IO connections
+                    if pin_type_code == 'B':
+                        continue
+
+                    fn.write(f"{pin_type_code}    1\n")
+                    fn.write(" M%s    ((%.3f %.3f)" % (str(layer), (shape.xLo - boundary.xLo) * 1.0e-3, (shape.yLo - boundary.yLo) * 1.0e-3))
+                    fn.write(" (%.3f %.3f))\n" % ((shape.xHi - boundary.xLo) * 1.0e-3, (shape.yHi - boundary.yLo) * 1.0e-3))
+
+    def writePlaceResultFile(self, fileName):
+        with open(fileName, 'w') as fn:
+            for nodeIdx in range(self.numCktNodes):
+                cktNode = self.ckt.node(nodeIdx)
+                subCkt = self.dDB.subCkt(cktNode.graphIdx)
+                x_offset = self.placer.xCellLoc(nodeIdx) - self.origin[0]
+                y_offset = self.placer.yCellLoc(nodeIdx) - self.origin[1]
+                boundary = subCkt.layout().boundary()
+                fn.write("%s %.3f %.3f %.3f %.3f\n" %  (cktNode.name.split("_")[-1], float(x_offset + boundary.xLo) * 1.0e-3, float(y_offset + boundary.yLo) * 1.0e-3,
+                                                float(boundary.xHi - boundary.xLo) * 1.0e-3, float(boundary.yHi - boundary.yLo) * 1.0e-3))
+
+    def writePlaceConnectionFile(self, fileName):
+        pin_type_codes_pn = ['D', 'G', 'S', 'B']
+        pin_type_codes_rm = ['PLUS', 'MINUS', 'B']
+        pin_codes_map = {}
+
+        with open(fileName, 'w') as fn:
+            for netIdx in range(self.ckt.numNets()):
+                net = self.ckt.net(netIdx)
+                fn.write("%s " % (net.name))
+
+                for pinInNetIdx in range(net.numPins()):
+                    pinIdx = net.pinIdx(pinInNetIdx)
+                    pin = self.ckt.pin(pinIdx)
+                    nodeIdx = pin.nodeIdx
+                    outCktNode = self.ckt.node(nodeIdx)
+                    outNodeName = outCktNode.name
+
+                    if outNodeName not in pin_codes_map:
+                        pin_codes_map[outNodeName] = [outCktNode.pinIdx(pIdx) for pIdx in range(outCktNode.numPins())]
+
+                    if outCktNode.numPins()  == 4:
+                        pinTypeCode = pin_type_codes_pn[pin_codes_map[outNodeName].index(pinIdx)]
+                    elif outCktNode.numPins() == 3:
+                        pinTypeCode = pin_type_codes_rm[pin_codes_map[outNodeName].index(pinIdx)]
+                    elif outCktNode.numPins() == 2:
+                        pinTypeCode = pin_type_codes_rm[pin_codes_map[outNodeName].index(pinIdx)]
+                    elif outCktNode.numPins() == 1:
+                        # dummy node
+                        continue
+                    else:
+                        raise NotImplementedError("Not support tpye of pins.")
+
+                    # assert pin_count_map[outNodeName] is not empty
+                    fn.write("%s %s " % (outNodeName.split("_")[-1], pinTypeCode))
+
+                fn.write("\n")

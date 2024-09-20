@@ -16,6 +16,7 @@ class Magical(object):
         self.db = MagicalDB.MagicalDB(self.params) # The flow database
         self.db.parse() #parsing the input files
         self.flow = Flow.Flow(self.db)
+
     def run(self):
         self.flow.run()
 

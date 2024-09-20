@@ -7,7 +7,7 @@ routing
 constraint_generation
 thirdparty
 *.pyc
-
+sandbox
 *bound
 *con
 *gds
@@ -19,3 +19,6 @@ thirdparty
 *sym
 *symnet
 dataset/
+*Dataset/
+*.sif
+*.tar.gz
