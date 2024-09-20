@@ -1,4 +1,5 @@
 # MAGICAL #
+[Forked from https://github.com/magical-eda/MAGICAL.git]
 
 MAGICAL: Machine Generated Analog IC Layout
 
