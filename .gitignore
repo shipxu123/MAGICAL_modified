@@ -22,3 +22,5 @@ dataset/
 *Dataset/
 *.sif
 *.tar.gz
+examples/
+*Dataset

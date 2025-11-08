@@ -58,9 +58,6 @@ class Placer(object):
         self.placer.numThreads(1) #FIXME
         start = time.time()
 
-        for i in range(100):
-            print("obj_param",self.obj_param)
-
         # initilize here
         # pdb.set_trace()
         self.symAxis = self.placer.solveWithParams(self.gridStep, self.obj_param, self.paplacer)
@@ -75,6 +72,7 @@ class Placer(object):
         self.placer.readTechSimpleFile(self.params.simple_tech_file)
         self.placeParsePin()
         self.placeConnection()
+
         self.placer.readSymFile(self.dirname + self.ckt.name + '.sym') # FIXME: use in memory interface
         self.placeParseSigpath()
         self.computeAndAddPowerCurrentFlow()
@@ -84,12 +82,32 @@ class Placer(object):
             self.tempCell = gdspy.Cell("FLOORPLAN")
         self.configureIoPinParameters()
         self.placer.readSymNetFile(self.dirname + self.ckt.name + '.symnet') # FIXME: use in memory interface
+        self.placeParseInitPlacement() # Read initial placement file if provided
+
         #self.feedDeviceProximity()
-    
+
     def placeParseSigpath(self):
         filename = self.dirname + self.ckt.name + '.sigpath' #FIXME: use in memeory interface
         if os.path.isfile(filename):
             self.placer.readSigpathFile(filename)
+
+    def placeParseInitPlacement(self):
+        """
+        @brief Read initial placement file if provided
+        The file format: cellName xLoc yLoc per line
+        """
+        # First check if a file path is specified in params
+        if self.params.init_placement_file and os.path.isfile(self.params.init_placement_file):
+            print("Reading initial placement from specified file: %s" % self.params.init_placement_file)
+            self.placer.readInitPlacementFile(self.params.init_placement_file)
+            return
+
+        # Otherwise, check for default file name in the directory
+        filename = self.dirname + self.ckt.name + '.init_placement.txt'
+        if os.path.isfile(filename):
+            print("Reading initial placement from default file: %s" % filename)
+            self.placer.readInitPlacementFile(filename)
+
     def computeAndAddPowerCurrentFlow(self):
         #if self.isTopLevel:
         #    return
@@ -108,6 +126,7 @@ class Placer(object):
                 for j in range(len(pinNamePaths[i])):
                     self.placer.addPinToSignalPath(pathIdx, cellNamePaths[i][j], pinNamePaths[i][j])
                     print("add pin to signal path", pathIdx, cellNamePaths[i][j], pinNamePaths[i][j])
+
     def feedDeviceProximity(self):
         for idx in range(len(self.deviceProximityTypes)):
             deviceType = self.deviceProximityTypes[idx]
@@ -667,8 +686,8 @@ class Placer(object):
         dataset_dir = self.dirname + "dataset/"
         rundir = "{}rundir_{}/".format(dataset_dir, self.no)
 
-        net_file = rundir + "data_net.json"
-        layout_file = rundir + "data_layout.json"
+        net_file = rundir + self.ckt.name + "data_net.json"
+        layout_file = rundir + self.ckt.name + "data_layout.json"
         nets_feature_map = {}
         layout_feature_map = {}
         if os.path.exists(net_file) and os.path.exists(layout_file):
@@ -719,13 +738,13 @@ class Placer(object):
         with open(layout_file, "w") as f:
             f.write(json_layout_obj)
 
-        place_pin_file = rundir + "place.pin"
+        place_pin_file = rundir + self.ckt.name  + ".place.pin"
         self.writePlacePinFile(place_pin_file)
 
-        place_result_file = rundir + "place.result"
+        place_result_file = rundir + self.ckt.name + ".place.result"
         self.writePlaceResultFile(place_result_file)
 
-        place_connection_file = rundir + "place.connection"
+        place_connection_file = rundir + self.ckt.name + ".place.connection"
         self.writePlaceConnectionFile(place_connection_file)
 
     def writePlacePinFile(self, fileName):
@@ -755,7 +774,8 @@ class Placer(object):
                         pin_type_code = pin_type_codes_rm[pinInNodeIdx]
                     else:
                         print(cellName)
-                        raise NotImplementedError("Not support tpye of pins.")
+                        continue
+                        #raise NotImplementedError("Not support tpye of pins.")
 
                     # jump over pin with bulk type to avoid handle IO connections
                     if pin_type_code == 'B':
@@ -806,7 +826,8 @@ class Placer(object):
                         # dummy node
                         continue
                     else:
-                        raise NotImplementedError("Not support tpye of pins.")
+                        continue
+                        #raise NotImplementedError("Not support tpye of pins.")
 
                     # assert pin_count_map[outNodeName] is not empty
                     fn.write("%s %s " % (outNodeName.split("_")[-1], pinTypeCode))

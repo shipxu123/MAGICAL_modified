@@ -25,6 +25,7 @@ class Params:
         self.simple_tech_file = "" # Input simple tech file
         self.techfile = ""
         self.lef = ""
+        self.init_placement_file = None # Optional initial placement file (format: cellName xLoc yLoc per line)
         self.vddNetNames = ["VDD", "vdd", "vdda", "vddd"]
         self.vssNetNames = ["VSS", "GND", "vss", "gnd", "vssa", "vssd"]
         self.digitalNetNames = ["clk"]
@@ -107,6 +108,7 @@ simple_tech_file [required]    | input simple techfile
         if 'techfile' in data : self.techfile = data['techfile']
         if 'vddNetNames' in data : self.vddNetNames = data['vddNetNames']
         if 'vssNetNames' in data : self.vssNetNames = data['vssNetNames']
+        if 'init_placement_file' in data : self.init_placement_file = data['init_placement_file']
         if 'no' in data: self.no = data["no"]
         if 'param_0' in data: self.param_0 = data["param_0"]
         if 'param_1' in data: self.param_1 = data["param_1"]

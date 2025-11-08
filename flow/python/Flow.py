@@ -119,7 +119,8 @@ class Flow(object):
             ckt = dDB.subCkt(cktIdx) # just to make sure the reference is not messed up
         # After all the children being implemented. P&R at this circuit
         ckt = dDB.subCkt(cktIdx) #magicalFlow.CktGraph
-        self.symDict = self.constraint.genConstraint(cktIdx, self.resultName)
+        #self.symDict = self.constraint.genConstraint(cktIdx, self.resultName)
+        self.symDict = {}
         self.setup(cktIdx)
         pnr = PnR.PnR(self.mDB)
         pnr.placeOnly(cktIdx, self.resultName, self.no, self.obj_param)

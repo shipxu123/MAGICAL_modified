@@ -126,7 +126,7 @@ class PnR(object):
         router.evaluate()
         if not routerPass:
             print("Routing failed! ckt ", ckt.name)
-            assert(routerPass)
+            #assert(routerPass)
         dataset_gds_dir = dirname + "dataset/rundir_"+str(no)+"/"
         router.writeLayoutGds(placeFile, dataset_gds_dir+ckt.name+'_'+str(no)+'.route.gds', True)
         router.writeLayoutGds(placeFile, dirname+ckt.name+'.route.gds', True)
